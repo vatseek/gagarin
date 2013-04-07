@@ -67,5 +67,104 @@ class ModelCatalogCategory extends Model {
 		
 		return $query->row['total'];
 	}
+
+    public function getCategoriesTree()
+    {
+        if (!$data = $this->cache->get('categories_tree')) {
+            $sql = "SELECT
+                    *
+                    FROM " . DB_PREFIX . "category c
+                    LEFT JOIN " . DB_PREFIX . "category_description cd
+                        ON (c.category_id = cd.category_id)
+                    LEFT JOIN " . DB_PREFIX . "category_to_store c2s
+                        ON (c.category_id = c2s.category_id)
+                    WHERE
+                        cd.language_id = '" . (int)$this->config->get('config_language_id') . "'
+                        AND c2s.store_id = '" . (int)$this->config->get('config_store_id') . "'
+                        AND c.status = '1' ORDER BY c.sort_order,
+                        LCASE(cd.name)";
+
+            $query = $this->db->query($sql);
+
+            //create tree
+            $categoryTree = $this->buildTree($query->rows, array('category_id' => 0));
+            $this->sortTree($categoryTree);
+
+            $data = $categoryTree['children'];
+
+            $this->cache->set('categories_tree', $data);
+        }
+
+        return $data;
+    }
+
+    protected function buildTree(&$categories, $thisCategory)
+    {
+        foreach ($categories as $category) {
+            if ($category['parent_id'] == $thisCategory['category_id']) {
+                $thisCategory['children'][] = $this->buildTree($categories, $category);
+            }
+        }
+
+        return $thisCategory;
+    }
+
+    protected function sortTree(&$categories)
+    {
+        $orders = array();
+
+        if (isset($categories['children'])) {
+            foreach ($categories['children'] as $key => $category) {
+                $this->sortTree($category);
+                $orders[$key] = $category['sort_order'];
+            }
+
+            asort($orders);
+
+            $sortedCategories = array();
+            foreach ($orders as $position => $orderItem) {
+                $sortedCategories[] = $categories['children'][$position];
+            }
+
+            $categories['children'] = $sortedCategories;
+        }
+    }
+
+    public function getCategoriesByArrayId($categoriesId)
+    {
+        sort($categoriesId);
+
+        $categoriesString = implode(',', $categoriesId);
+        $key = md5($categoriesString);
+
+        if (!$data = $this->cache->get($key)) {
+            $sql = "SELECT
+                        _c.category_id ,
+                        _p.*,
+                        _pd.*
+                    FROM  " . DB_PREFIX . "category AS _c
+                    LEFT JOIN  " . DB_PREFIX . "rating_index as _ri
+                        ON _ri.category_id = _c.category_id AND _ri.store_id = 0
+                    LEFT JOIN  " . DB_PREFIX . "product AS _p
+                        ON _p.product_id = _ri.product_id
+                    LEFT JOIN  " . DB_PREFIX . "product_description AS _pd
+                        ON _pd.product_id = _p.product_id AND _pd.language_id = 2
+                    WHERE
+                        _c.category_id IN ({$categoriesString})";
+            $query = $this->db->query($sql);
+
+            $result = array();
+            foreach ($query->rows as $record) {
+                if (isset($record['product_id'])) {
+                    $result[$record['category_id']] = $record;
+                }
+            }
+
+            $this->cache->set($key, $result);
+            $data = $result;
+        }
+
+        return $data;
+    }
 }
 ?>

@@ -536,7 +536,7 @@ ul{
 	background: #FFFFFF;
 	position: absolute;
 	z-index: 5;
-	padding: 10px 10px 0;
+	padding: 10px 10px 10px 0;
 	-webkit-border-radius: 0px 0px 3px 3px;
 	-moz-border-radius: 0px 0px 3px 3px;
 	-khtml-border-radius: 0px 0px 3px 3px;
@@ -565,7 +565,7 @@ ul{
 	min-width: 120px;
 }
 #menu > ul > li ul > li > a:hover {
-	
+
 }
 #menu > ul > li > div > ul > li > a {
 	color: #FFFFFF;
@@ -2538,3 +2538,84 @@ table.list .center {
 		margin-left:15px;
 		text-decoration:underline;
 		}
+
+div.content-block {
+    display: none;
+}
+
+div.menusublink {
+    width: 400px;
+}
+
+#menu table ul li a:hover {
+    background: #fff;
+    color: #000;
+}
+
+#menu table td{
+    vertical-align: top;
+}
+#menu table td.cell-menu {
+    border-right: 1px #666 dashed;
+    padding-right: 10px;
+}
+
+#menu .menusublink li {
+    float: left;
+    width: 190px;
+    display: block;
+}
+#menu .menusublink li a {
+    text-decoration: none;
+    font-size: 11px;
+
+}
+
+#menu .best-price {
+    width: 400px;
+    color: #fff;
+    clear: both;
+    background: #fff;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+    color: #333;
+}
+
+#menu .best-price img {
+    margin: 6px;
+    float: left;
+}
+
+#menu .menusublink {
+    padding-left: 10px;
+}
+
+#menu .product-note {
+    width: 240px;
+    padding-left: 140px;
+    min-height: 132px;
+}
+
+#menu .product-note .product-header {
+    display: block;
+    font-size: 14px;
+    color: #000;
+    padding: 10px 0 6px 0;
+}
+
+#menu .product-note .product-price {
+    font-size: 20px;
+    color: #a00;
+    display: block;
+}
+
+#menu .product-note .button .product-href {
+    float: right;
+}
+
+
+#menu .product-note.description {
+    min-height: 20px;
+    width: 380px;
+    padding-left: 10px;
+}

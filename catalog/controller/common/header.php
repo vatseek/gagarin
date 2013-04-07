@@ -93,40 +93,15 @@ class ControllerCommonHeader extends Controller {
 		$this->load->model('catalog/product');
 		
 		$this->data['categories'] = array();
-					
-		$categories = $this->model_catalog_category->getCategories(0);
-		
-		foreach ($categories as $category) {
-			if ($category['top']) {
-				// Level 2
-				$children_data = array();
-				
-				$children = $this->model_catalog_category->getCategories($category['category_id']);
-				
-				foreach ($children as $child) {
-					$data = array(
-						'filter_category_id'  => $child['category_id'],
-						'filter_sub_category' => true
-					);
-					
-					$product_total = $this->model_catalog_product->getTotalProducts($data);
-									
-					$children_data[] = array(
-						'name'  => $child['name'] . ($this->config->get('config_product_count') ? ' (' . $product_total . ')' : ''),
-						'href'  => $this->url->link('product/category', 'path=' . $category['category_id'] . '_' . $child['category_id'])
-					);						
-				}
-				
-				// Level 1
-				$this->data['categories'][] = array(
-					'name'     => $category['name'],
-					'children' => $children_data,
-					'column'   => $category['column'] ? $category['column'] : 1,
-					'href'     => $this->url->link('product/category', 'path=' . $category['category_id'])
-				);
-			}
-		}
-		
+
+        //get categories as tree with any nesting
+        $categories = $this->model_catalog_category->getCategoriesTree();
+        $categories = $this->addBestProducts($categories);
+
+        $this->createCategoryLinks($categories);
+
+        $this->data['categories'] = $categories;
+
 		$this->children = array(
 			'module/language',
 			'module/currency',
@@ -140,6 +115,68 @@ class ControllerCommonHeader extends Controller {
 		}
 		
     	$this->render();
-	} 	
+	}
+
+    protected function createCategoryLinks(&$categories, $path = '')
+    {
+        foreach ($categories as &$category) {
+            if (isset($category['children'])) {
+                $this->createCategoryLinks($category['children'], $path . $category['category_id'] . '_');
+            }
+
+            $data = array(
+                'filter_category_id'  => $category['category_id'],
+                'filter_sub_category' => true
+            );
+
+            if ($path) {
+                $category['name'] = $category['name'] . ($this->config->get('config_product_count') ? ' (' . $this->model_catalog_product->getTotalProducts($data) . ')' : '');
+            }
+            $category['column'] = $category['column'] ? $category['column'] : 1;
+            $category['href'] = $this->url->link('product/category', 'path=' . $path . $category['category_id']);
+        }
+    }
+
+    protected function addBestProducts($categories)
+    {
+        $this->load->model('tool/image');
+
+        $subCategoriesId = array();
+        foreach ($categories as $category) {
+            if (isset($category['children'])) {
+                foreach ($category['children'] as $subcategory) {
+                    $subCategoriesId[$subcategory['category_id']] = $subcategory['category_id'];
+                }
+            }
+        }
+
+        $subCategoriesProduct = $this->model_catalog_category->getCategoriesByArrayId($subCategoriesId);
+
+        foreach ($categories as &$category) {
+            if (isset($category['children'])) {
+                foreach ($category['children'] as &$subcategory) {
+                    if (isset($subCategoriesProduct[$subcategory['category_id']])) {
+                        $productData = $subCategoriesProduct[$subcategory['category_id']];
+
+                        $product = array();
+                        if ($productData['image']) {
+                            $product['image'] = $this->model_tool_image->resize($productData['image'], 120, 120);
+                        }
+
+                        if ($productData['product_id']) {
+                            $product['href'] = $this->url->link('product/product', 'product_id=' . $productData['product_id']);
+                        }
+
+                        $product['name'] = $productData['name'];
+                        $product['description'] = $productData['description'];
+                        $product['price'] = $this->currency->format($this->tax->calculate($productData['price'], $productData['tax_class_id'], $this->config->get('config_tax')));
+                        $subcategory['product'] = $product;
+                    }
+                }
+            }
+        }
+
+        return $categories;
+    }
 }
 ?>
