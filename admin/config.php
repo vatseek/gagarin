@@ -1,30 +1,47 @@
 <?php
 // HTTP
-define('HTTP_SERVER', 'http://evideo.org.ua/admin/');
-define('HTTP_CATALOG', 'http://evideo.org.ua/');
+
+if (defined('ENV_DEV')) {
+    $basePath = '/home/vatseek/web/evideo.km.ua.work/';
+    $user = 'user';
+    $password = '';
+    $database = 'evideo_km_ua';
+    $baseUrl = 'http://evideo.km.ua.work/';
+    $baseAdminUrl = 'http://evideo.km.ua.work/admin/';
+} else {
+    $basePath = '/var/www/clients/client12/web8/web/';
+    $user = 'c12evideo_org_ua';
+    $password = 'evideo.org.ua';
+    $database = 'c12evideo_org_ua';
+    $baseUrl = 'http://evideo.org.ua/';
+    $baseAdminUrl = 'http://evideo.org.ua/admin/';
+}
+
+define('HTTP_SERVER', $baseAdminUrl);
+define('HTTP_CATALOG', $baseUrl);
 
 // HTTPS
-define('HTTPS_SERVER', 'http://evideo.org.ua/admin/');
-define('HTTPS_CATALOG', 'http://evideo.org.ua/');
+define('HTTPS_SERVER', $baseAdminUrl);
+define('HTTPS_CATALOG', $baseUrl);
 
 // DIR
-define('DIR_APPLICATION', '/var/www/clients/client12/web8/web/admin/');
-define('DIR_SYSTEM', '/var/www/clients/client12/web8/web/system/');
-define('DIR_DATABASE', '/var/www/clients/client12/web8/web/system/database/');
-define('DIR_LANGUAGE', '/var/www/clients/client12/web8/web/admin/language/');
-define('DIR_TEMPLATE', '/var/www/clients/client12/web8/web/admin/view/template/');
-define('DIR_CONFIG', '/var/www/clients/client12/web8/web/system/config/');
-define('DIR_IMAGE', '/var/www/clients/client12/web8/web/image/');
-define('DIR_CACHE', '/var/www/clients/client12/web8/web/system/cache/');
-define('DIR_DOWNLOAD', '/var/www/clients/client12/web8/web/download/');
-define('DIR_LOGS', '/var/www/clients/client12/web8/web/system/logs/');
-define('DIR_CATALOG', '/var/www/clients/client12/web8/web/catalog/');
+define('DIR_APPLICATION',   $basePath . 'admin/');
+define('DIR_SYSTEM',        $basePath . 'system/');
+define('DIR_DATABASE',      $basePath . 'system/database/');
+define('DIR_LANGUAGE',      $basePath . 'admin/language/');
+define('DIR_TEMPLATE',      $basePath . 'admin/view/template/');
+define('DIR_CONFIG',        $basePath . 'system/config/');
+define('DIR_IMAGE',         $basePath . 'image/');
+define('DIR_CACHE',         $basePath . 'system/cache/');
+define('DIR_DOWNLOAD',      $basePath . 'download/');
+define('DIR_LOGS',          $basePath . 'system/logs/');
+define('DIR_CATALOG',       $basePath . 'catalog/');
 
 // DB
 define('DB_DRIVER', 'mysql');
 define('DB_HOSTNAME', 'localhost');
-define('DB_USERNAME', 'c12evideo_org_ua');
-define('DB_PASSWORD', 'evideo.org.ua');
-define('DB_DATABASE', 'c12evideo_org_ua');
+define('DB_USERNAME', $user);
+define('DB_PASSWORD', $password);
+define('DB_DATABASE', $database);
 define('DB_PREFIX', 'oc_');
 ?>
