@@ -50,8 +50,9 @@ class Parser
 
                 if (isset($result['products'])) {
                     foreach ($result['products'] as $productLink) {
+                        echo $productLink . PHP_EOL;
                         $this->parseProduct($this->host . $productLink, $result['category']);
-                        usleep(300);
+                        usleep(600);
                     }
                 }
 
@@ -88,6 +89,13 @@ class Parser
         }
 
         $product->images = $images;
+
+        $product->image = '';
+        $tmp = $html->find('#images-preview img');
+        if (isset($tmp[0])) {
+            $path = $this->uploadImage($this->host . trim($tmp[0]->src));
+            $product->image = $path;
+        }
 
         $tmp = $html->find('div.panes div.content');
         $product->description = '';
@@ -167,7 +175,7 @@ class Parser
             '{$this->_db->escape($product->sku)}',
             10,
             7,
-            '{$image}',
+            '{$product->image}',
             1,
             1000,
             1
@@ -177,7 +185,6 @@ class Parser
         $product_id = $this->_db->getLastId();
 
         if (!$product_id) {
-            /*debug*/ die('111');
             return false;
         }
 
@@ -198,15 +205,9 @@ class Parser
         if (isset($product->images[0])) {
             $counter = 0;
             foreach ($product->images as $image) {
+                $path = $this->uploadImage($image);
 
-                preg_match_all('/.*\.([A-Za-z]{2,4})$/Ui', $image, $matches);
-                if (isset($matches[1][0])) {
-                    $type = '.' . $matches[1][0];
-                    copy($image,  DIR_IMAGE . 'data/tmp.pic');
-                    $filename = md5_file(DIR_IMAGE . 'data/tmp.pic');
-                    copy(DIR_IMAGE . 'data/tmp.pic', DIR_IMAGE . 'data/' . $filename . $type);
-                    $path = 'data/' . $filename . $type;
-
+                if ($path) {
                     $sql .= "(NULL, '{$product->product_id}', '{$path}', 0),";
                     $counter++;
                 }
@@ -221,6 +222,31 @@ class Parser
         $this->saveProductAttributes($product);
 
         echo ' - done' . PHP_EOL;
+    }
+
+
+    protected function uploadImage($path)
+    {
+        preg_match_all('/.*\.([A-Za-z]{2,4})$/Ui', $path, $matches);
+        if (isset($matches[1][0])) {
+            $type = '.' . $matches[1][0];
+            copy($path,  DIR_IMAGE . 'data/tmp.pic');
+            $filename = md5_file(DIR_IMAGE . 'data/tmp.pic');
+            copy(DIR_IMAGE . 'data/tmp.pic', DIR_IMAGE . 'data/' . $filename . $type);
+            $path = 'data/' . $filename . $type;
+
+            return $path;
+        }
+
+        return false;
+    }
+
+    protected function updateProductImage($product)
+    {
+        $sql = "UPDATE " . DB_PREFIX . "product
+                SET image = '{$product->image}'
+                WHERE product_id = '{$product->product_id}';";
+        $this->_db->query($sql);
     }
 
     protected function saveProductAttributes($product)
