@@ -26,9 +26,19 @@ class Parser
         $this->_db = $db;
     }
 
+    public function parse()
+    {
+        $handle = fopen(DIR_IMAGE . 'product.list', "r");
+        while (($buffer = fgets($handle, 4096)) !== false) {
+            $data = unserialize($buffer);
+            $this->parseProduct($this->host . $data['product'], $data['category']);
+        }
+    }
+
     public function start()
     {
         // find main links
+        file_put_contents(DIR_IMAGE . 'product.list', '');
         $links = $this->getCatalog();
         $linksCount = count($links);
 
@@ -50,9 +60,15 @@ class Parser
 
                 if (isset($result['products'])) {
                     foreach ($result['products'] as $productLink) {
+
+                        $data = serialize(array('product' => $productLink, 'category' => $result['category']));
+
+                        var_dump($data);
+
+                        file_put_contents(DIR_IMAGE . 'product.list', $data . "\n", FILE_APPEND);
                         echo $productLink . PHP_EOL;
-                        $this->parseProduct($this->host . $productLink, $result['category']);
-                        usleep(600);
+                        //$this->parseProduct($this->host . $productLink, $result['category']);
+                        usleep(1200);
                     }
                 }
 
@@ -70,7 +86,21 @@ class Parser
 
     public function parseProduct($url, $categoryName)
     {
-        $html = file_get_html($url);
+        usleep(500000);
+        try {
+            $html = file_get_html($url);
+        } catch(Exception $e) {
+            $this->parseProduct($url, $categoryName);
+            $data = serialize(array('product' => $url, 'category' => $categoryName));
+            file_put_contents(DIR_IMAGE . 'error.list', $data, FILE_APPEND);
+        }
+
+        if (!$html) {
+            file_put_contents(DIR_IMAGE . 'error.list', $data, FILE_APPEND);
+            return;
+        }
+
+        echo $url . PHP_EOL;
 
         $product = new StdClass();
 
@@ -81,7 +111,7 @@ class Parser
             return false;
         }
 
-        $product->name = getHtmlData($html->find('h1.good-info-header'))->innertext;
+        $product->name = $this->encode(getHtmlData($html->find('h1.good-info-header'))->innertext);
 
         $images = array();
         foreach ($html->find('#images-list li a') as $item) {
@@ -101,21 +131,21 @@ class Parser
         $product->description = '';
 
         if (isset($tmp[0])) {
-            $product->description = trim($this->_db->escape($tmp[0]->innertext));
+            $product->description = $this->encode(trim($this->_db->escape($tmp[0]->innertext)));
         }
 
         $options = array();
         foreach ($html->find('table.properties-table tr') as $item) {
             $tmp = $item->find('td.prop');
             if (isset($tmp[0])) {
-                $optionName = $this->_db->escape(strip_tags(trim(str_replace("\t", '', $tmp[0]->innertext))));
+                $optionName = $this->encode($this->_db->escape(strip_tags(trim(str_replace("\t", '', $tmp[0]->innertext)))));
             } else {
                 continue;
             }
 
             $tmp = $item->find('td.val');
             if (isset($tmp[0])) {
-                $optionValue = $this->_db->escape(strip_tags(trim(str_replace("\t", '', $tmp[0]->innertext))));
+                $optionValue = $this->encode($this->_db->escape(strip_tags(trim(str_replace("\t", '', $tmp[0]->innertext)))));
             } else {
                 continue;
             }
@@ -127,6 +157,11 @@ class Parser
         $this->saveProduct($product);
     }
 
+    protected function encode($string)
+    {
+        return str_replace("'", '&#39;', $string);
+    }
+
     protected function getCategoryByName($categoryName)
     {
         //get category id
@@ -134,7 +169,7 @@ class Parser
                    category_id
                 FROM " . DB_PREFIX . "category_description
                 WHERE
-                    name = '{$categoryName}' AND
+                    name = '{$this->encode($categoryName)}' AND
                     language_id = 2";
         $result = $this->_db->query($sql);
 
@@ -166,13 +201,12 @@ class Parser
         $product->category_id = $this->getCategoryByName($product->category);
 
         // add to product table
-        $image = isset($product->images[0]) ? $this->_db->escape($product->images[0]) : '';
         $sql = "INSERT INTO
             " . DB_PREFIX . "product (product_id, model, sku, quantity, stock_status_id, image, shipping, price, status)
             VALUES
             (NULL,
-            '{$this->_db->escape($product->name)}',
-            '{$this->_db->escape($product->sku)}',
+            '{$this->encode($this->_db->escape($product->name))}',
+            '{$this->encode($this->_db->escape($product->sku))}',
             10,
             7,
             '{$product->image}',
@@ -299,7 +333,20 @@ class Parser
 
     protected function getProducts($url, $page = 1)
     {
-        $html = file_get_html($url);
+        try {
+            $html = file_get_html($url);
+        } catch(Exception $e) {
+            echo 'Download error try';
+            usleep(2000);
+            return $this->getProducts($url, $page);
+        }
+
+        if (!$html) {
+            echo 'Download error try';
+            usleep(2000);
+            return $this->getProducts($url, $page);
+        }
+
 
         $category = $html->find('h1.category');
         $categoryName = $category[0]->innertext;
@@ -378,4 +425,5 @@ $db = new DB(DB_DRIVER, DB_HOSTNAME, DB_USERNAME, DB_PASSWORD, DB_DATABASE);
 $registry->set('db', $db);
 
 $index = new Parser($db, $config);
-$index->start();
+//$index->start();
+$index->parse();
